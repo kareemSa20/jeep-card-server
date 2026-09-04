@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم مالك النظام | جيب كارت Jeep Card</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Readex+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <!-- Login Modal / Screen -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-icon">🛡️</div>
+            <h2 class="login-title">تسجيل دخول مالك النظام</h2>
+            <p class="login-sub">لوحة إدارة الاشتراكات وتراخيص تطبيق جيب كارت</p>
+
+            <form id="login-form" class="login-form">
+                <div class="input-group">
+                    <label for="pin-input">رمز PIN السري للمالك:</label>
+                    <input type="password" id="pin-input" maxlength="12" placeholder="••••••" autofocus required>
+                </div>
+                <div id="login-alert" class="alert-box alert-error hidden"></div>
+                <button type="submit" id="login-btn" class="btn btn-primary btn-block">
+                    دخول لوحة التحكم
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard UI (Hidden until authenticated) -->
+    <div id="dashboard-app" class="dashboard-layout hidden">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="admin-logo">💳</div>
+                <div class="admin-brand">
+                    <h3>جيب كارت</h3>
+                    <span>لوحة تحكم المالك</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-tab active" data-tab="overview">
+                    <span class="nav-icon">📊</span> نظرة عامة
+                </button>
+                <button class="nav-tab" data-tab="requests">
+                    <span class="nav-icon">📥</span> طلبات الاشتراك
+                    <span class="badge-counter hidden" id="pending-badge">0</span>
+                </button>
+                <button class="nav-tab" data-tab="licenses">
+                    <span class="nav-icon">🔑</span> الاشتراكات والتراخيص
+                </button>
+                <button class="nav-tab" data-tab="devices">
+                    <span class="nav-icon">📱</span> إدارة الأجهزة
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="server-status">
+                    <span class="status-dot"></span>
+                    <span>الخادم متصل ونشط</span>
+                </div>
+                <button id="logout-btn" class="logout-btn">
+                    <span>🚪 خروج</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <div class="topbar-title">
+                    <h1 id="page-title">نظرة عامة وإحصائيات</h1>
+                    <span class="server-time" id="server-time-display">03/09/2026</span>
+                </div>
+                <div class="topbar-actions">
+                    <button id="refresh-all-btn" class="btn btn-secondary btn-sm">
+                        🔄 تحديث البيانات
+                    </button>
+                    <a href="/" target="_blank" class="btn btn-secondary btn-sm">
+                        🌐 فتح موقع العملاء
+                    </a>
+                </div>
+            </header>
+
+            <!-- 1. Overview Tab -->
+            <section id="tab-overview" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="stat-card stat-pending">
+                        <div class="stat-card-icon">⏳</div>
+                        <div class="stat-card-info">
+                            <span class="stat-card-label">طلبات بانتظار المراجعة</span>
+                            <span class="stat-card-val" id="stat-pending-requests">0</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-active">
+                        <div class="stat-card-icon">✅</div>
+                        <div class="stat-card-info">
+                            <span class="stat-card-label">اشتراكات نشطة</span>
+                            <span class="stat-card-val" id="stat-active-licenses">0</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-devices">
+                        <div class="stat-card-icon">📱</div>
+                        <div class="stat-card-info">
+                            <span class="stat-card-label">إجمالي الأجهزة المسجلة</span>
+                            <span class="stat-card-val" id="stat-total-devices">0</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-freeops">
+                        <div class="stat-card-icon">⚡</div>
+                        <div class="stat-card-info">
+                            <span class="stat-card-label">عمليات تجريبية مستهلكة</span>
+                            <span class="stat-card-val" id="stat-total-trial-ops">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Pending Requests Quick Table -->
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2>⚡ أحدث طلبات الاشتراك المعلقة</h2>
+                        <button class="btn btn-link" onclick="switchTab('requests')">عرض كل الطلبات ←</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>المشترك</th>
+                                    <th>رقم الهاتف</th>
+                                    <th>الجهاز</th>
+                                    <th>الباقة المطلوبة</th>
+                                    <th>تاريخ الطلب</th>
+                                    <th>الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quick-requests-tbody">
+                                <tr><td colspan="7" class="empty-state">لا توجد طلبات معلقة حالياً.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Subscription Requests Tab -->
+            <section id="tab-requests" class="tab-content">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2>📋 طلبات الاشتراكات</h2>
+                        <div class="filter-group">
+                            <button class="filter-btn active" data-status="ALL">الكل</button>
+                            <button class="filter-btn" data-status="PENDING">بانتظار المراجعة</button>
+                            <button class="filter-btn" data-status="APPROVED">مقبولة</button>
+                            <button class="filter-btn" data-status="REJECTED">مرفوضة</button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>المشترك</th>
+                                    <th>الهاتف</th>
+                                    <th>الجهاز</th>
+                                    <th>كود الربط</th>
+                                    <th>الباقة المطلوبة</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ الطلب</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="all-requests-tbody">
+                                <tr><td colspan="9" class="empty-state">جارٍ جلب الطلبات...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Licenses Management Tab -->
+            <section id="tab-licenses" class="tab-content">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2>🔑 التراخيص والاشتراكات الصادرة</h2>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>معرف الترخيص</th>
+                                    <th>معرف الجهاز</th>
+                                    <th>نوع الباقة</th>
+                                    <th>تاريخ البداية</th>
+                                    <th>تاريخ الانتهاء</th>
+                                    <th>الحالة</th>
+                                    <th>التوقيع الرقمي</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="licenses-tbody">
+                                <tr><td colspan="8" class="empty-state">جارٍ جلب التراخيص...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Devices Fleet Tab -->
+            <section id="tab-devices" class="tab-content">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2>📱 أسطول الأجهزة المسجلة</h2>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>معرف الجهاز (Device ID)</th>
+                                    <th>الموديل</th>
+                                    <th>تطبيق (App ID)</th>
+                                    <th>العمليات المجانية المستهلكة</th>
+                                    <th>المتبقي من 50</th>
+                                    <th>حالة الجهاز</th>
+                                    <th>آخر اتصال</th>
+                                    <th>تعديل العداد</th>
+                                </tr>
+                            </thead>
+                            <tbody id="devices-tbody">
+                                <tr><td colspan="8" class="empty-state">جارٍ جلب الأجهزة...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal: Review & Decide on Request -->
+    <div id="decision-modal" class="modal-overlay hidden">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="modal-req-title">مراجعة الطلب #1842</h3>
+                <button class="modal-close" onclick="closeDecisionModal()">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Request Summary Box -->
+                <div class="request-meta-card">
+                    <div class="meta-row">
+                        <span>المشترك:</span> <strong id="modal-cust-name">-</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>رقم الهاتف:</span> <strong id="modal-cust-phone">-</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>معرف الجهاز:</span> <code id="modal-device-id">-</code>
+                    </div>
+                    <div class="meta-row">
+                        <span>كود الربط:</span> <strong id="modal-pairing-code">-</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>الباقة المطلوبة من العميل:</span> <strong id="modal-requested-plan" class="highlight-plan">-</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>ملاحظات العميل / الحوالة:</span> <span id="modal-notes">-</span>
+                    </div>
+                </div>
+
+                <!-- Decision Form -->
+                <div class="decision-tabs">
+                    <button class="decision-tab-btn active" id="tab-btn-approve" onclick="setDecisionMode('APPROVE')">
+                        ✅ قبول وتفعيل الاشتراك
+                    </button>
+                    <button class="decision-tab-btn" id="tab-btn-reject" onclick="setDecisionMode('REJECT')">
+                        ❌ رفض الطلب
+                    </button>
+                </div>
+
+                <!-- Approve Form View -->
+                <div id="approve-view" class="decision-view">
+                    <p class="section-notice">
+                        يمكنك قبول نفس الباقة التي طلبها العميل، أو منح باقة ومدة مخصصة حسب المبلغ المدفوع:
+                    </p>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>الباقة التي ستمنحها للمستخدم:</label>
+                            <select id="modal-grant-plan" onchange="onPlanSelectChanged()">
+                                <option value="month">اشتراك شهر (30 يوماً)</option>
+                                <option value="6months">اشتراك 6 أشهر (180 يوماً)</option>
+                                <option value="year">اشتراك سنة (365 يوماً)</option>
+                                <option value="lifetime">اشتراك دائم (مدى الحياة)</option>
+                                <option value="custom">مدة مخصصة بالأيام ⚙️</option>
+                            </select>
+                        </div>
+
+                        <div class="form-field">
+                            <label>عدد الأيام الممنوحة:</label>
+                            <input type="number" id="modal-grant-days" min="1" max="36500" value="30">
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <label>ملاحظات إدارية (اختياري):</label>
+                        <input type="text" id="modal-admin-notes" placeholder="مثال: تم التأكد من إشعار الكريمي 10,000 ريال">
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeDecisionModal()">إلغاء</button>
+                        <button type="button" class="btn btn-success" id="confirm-approve-btn" onclick="executeApprove()">
+                            ⚡ تفعيل الاشتراك وإصدار الترخيص الآن
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reject Form View -->
+                <div id="reject-view" class="decision-view hidden">
+                    <div class="form-field">
+                        <label>حدد سبب الرفض:</label>
+                        <select id="modal-reject-reason">
+                            <option value="الدفع غير مؤكد">الدفع غير مؤكد (لم يصل الإشعار)</option>
+                            <option value="معلومات غير صحيحة">معلومات غير صحيحة</option>
+                            <option value="مبلغ التحويل ناقص">مبلغ التحويل ناقص</option>
+                            <option value="طلب مكرر">طلب مكرر</option>
+                            <option value="طلب مرفوض من الإدارة">طلب مرفوض من الإدارة</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeDecisionModal()">إلغاء</button>
+                        <button type="button" class="btn btn-danger" id="confirm-reject-btn" onclick="executeReject()">
+                            تأكيد رفض الطلب
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Extend / Modify License -->
+    <div id="license-modal" class="modal-overlay hidden">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="license-modal-title">تعديل الترخيص</h3>
+                <button class="modal-close" onclick="closeLicenseModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p id="license-modal-desc">حدد الإجراء المطلوب تنفيذه على الترخيص:</p>
+                
+                <div class="form-field" style="margin: 15px 0;">
+                    <label>تمديد الصلاحية بعدد إضافي من الأيام:</label>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setExtendDays(30)">+30 يوم</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setExtendDays(90)">+90 يوم</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setExtendDays(365)">+سنة</button>
+                    </div>
+                    <input type="number" id="extend-days-input" value="30" min="1" style="margin-top: 8px;">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" onclick="executeLicenseAction('EXTEND')">➕ تمديد الترخيص</button>
+                    <button type="button" class="btn btn-warning" onclick="executeLicenseAction('SUSPEND')">⏸️ إيقاف مؤقت</button>
+                    <button type="button" class="btn btn-danger" onclick="executeLicenseAction('REVOKE')">🚫 إلغاء نهائي</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeLicenseModal()">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

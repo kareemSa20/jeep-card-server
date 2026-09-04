@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جيب كارت | منظومة البيع الآلي لكروت الإنترنت والمحافظ الإلكترونية</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Readex+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- 1. Floating Pill Navbar (شريط التنقل العلوي العائم) -->
+    <div class="nav-wrapper">
+        <header class="navbar floating-pill-navbar">
+            <div class="nav-brand">
+                <a href="#hero" class="brand-link">
+                    <span class="brand-icon">💳</span>
+                    <div class="brand-title-wrap">
+                        <span class="brand-name">جيب كارت</span>
+                        <span class="brand-sub">Jeep Card</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Nav Links (الروابط في المنتصف) -->
+            <nav class="nav-menu" id="nav-menu">
+                <a href="#hero" class="nav-item active">الرئيسية</a>
+                <a href="#about" class="nav-item">عن المنظومة</a>
+                <a href="#features" class="nav-item">المميزات</a>
+                <a href="#plans" class="nav-item">الباقات</a>
+                <a href="activate.html" class="nav-item">ربط التطبيق</a>
+                <a href="order.html" class="nav-item">تأكيد ومتابعة الطلب</a>
+                <a href="#contact" class="nav-item">تواصل معنا</a>
+            </nav>
+
+            <!-- Actions (الأزرار البارزة) -->
+            <div class="nav-actions">
+                <a href="activate.html" class="btn-nav-cta">طلب اشتراك / ربط التطبيق</a>
+                <a href="/admin" class="btn-nav-admin" target="_blank" title="لوحة تحكم مالك النظام">
+                    <span class="admin-icon">🛡️</span>
+                    <span class="admin-text">دخول المالك</span>
+                </a>
+                <button class="nav-mobile-toggle" id="nav-toggle" aria-label="القائمة">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </header>
+    </div>
+
+    <!-- 2. Hero Section (قسم البانر الرئيسي بالأزرق الملكي والتدرج وتموج الـ SVG) -->
+    <section class="hero-section" id="hero">
+        <!-- Decorative Ambient Lights -->
+        <div class="hero-decor decor-circle-1"></div>
+        <div class="hero-decor decor-circle-2"></div>
+
+        <div class="hero-content container">
+            <div class="hero-pill-badge">
+                <span class="sparkle">✨</span>
+                <span>المنظومة الأولى والأذكى لإدارة شبكات المايكروتك والمحافظ الإلكترونية</span>
+            </div>
+
+            <h1 class="hero-title">معاً نصنع تجربة بيع ذكية وحقيقية</h1>
+
+            <p class="hero-desc">
+                تمنحك منظومة <strong>جيب كارت (Jeep Card)</strong> الأتمتة الكاملة لاستقبال إشعارات التحويل المالي وصرف كروت الإنترنت فورياً لعملائك دون أي تدخل يدوي وعلى مدار 24 ساعة بأعلى معايير الاستقرار والأمان.
+            </p>
+
+            <div class="hero-buttons">
+                <a href="activate.html" class="btn-leaf-green btn-hero-pill">
+                    <span class="btn-icon">🚀</span>
+                    <span>ابدأ التجربة المجانية (50 عملية)</span>
+                </a>
+                <a href="#plans" class="btn-hero-outline">
+                    <span>استكشف الباقات والأسعار</span>
+                    <span class="btn-arrow">←</span>
+                </a>
+            </div>
+
+            <!-- Mini Trust Badges -->
+            <div class="hero-trust-bar">
+                <div class="trust-item">
+                    <span class="trust-check">✓</span> 50 عملية مجانية فورية
+                </div>
+                <div class="trust-item">
+                    <span class="trust-check">✓</span> دعم جميع المحافظ اليمنية
+                </div>
+                <div class="trust-item">
+                    <span class="trust-check">✓</span> ربط آمن ومباشر مع المايكروتك
+                </div>
+            </div>
+        </div>
+
+        <!-- Organic White SVG Wave Divider (المقسم المتموج الأبيض الناعم) -->
+        <div class="hero-wave-divider">
+            <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                <path d="M0,45 C280,105 450,15 720,60 C990,105 1160,25 1440,65 L1440,120 L0,120 Z" fill="#ffffff"></path>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Main Content Container -->
+    <main class="site-main">
+
+        <!-- 3. About Section (❓ من نحن؟) -->
+        <section class="section-about container" id="about">
+            <div class="section-head text-center">
+                <div class="section-badge-pill">❓ من نحن؟</div>
+                <h2 class="section-heading">شريكك التقني الموثوق لأتمتة شبكة الإنترنت الخاصة بك</h2>
+            </div>
+
+            <div class="about-card">
+                <p class="about-text">
+                    <strong>جيب كارت (Jeep Card)</strong> هي منظومة تقنية متطورة صُممت بعناية فائقة لأصحاب ومديري شبكات الواي فاي والإنترنت في الجمهورية اليمنية. نهدف إلى القضاء التام على التأخير في صرف الكروت، أخطاء البيع اليدوي، ومشاكل مطابقة إشعارات التحويل. من خلال الربط المباشر والذكي مع سيرفرات <strong>MikroTik</strong> ومختلف المحافظ والبنوك الإلكترونية اليمنية، نقدم لك حلاً سحابياً ذكياً ومستقراً يعمل على مدار الساعة لخدمة عملائك وزيادة مبيعاتك دون أي عناء.
+                </p>
+                <div class="about-highlights">
+                    <div class="highlight-item">
+                        <span class="hi-icon">⚡</span>
+                        <div class="hi-info">
+                            <strong>سرعة فائقة</strong>
+                            <span>صرف الكرت خلال أقل من 5 ثوانٍ من وصول الإشعار</span>
+                        </div>
+                    </div>
+                    <div class="highlight-item">
+                        <span class="hi-icon">🔒</span>
+                        <div class="hi-info">
+                            <strong>أمان ومطابقة 100%</strong>
+                            <span>منع تكرار الإشعارات والتأكد من صحة المبالغ</span>
+                        </div>
+                    </div>
+                    <div class="highlight-item">
+                        <span class="hi-icon">📱</span>
+                        <div class="hi-info">
+                            <strong>إشعار مباشر عبر واتساب</strong>
+                            <span>إرسال كود الكرت تلقائياً للعميل برسالة منسقة</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Features & Goals Section (💡 مميزاتنا وأهدافنا) -->
+        <section class="section-features container" id="features">
+            <div class="section-head text-center">
+                <div class="section-badge-pill">💡 مميزاتنا وأهدافنا</div>
+                <h2 class="section-heading">حلول ذكية صُممت لتوفير وقتك ومضاعفة أرباح شبكتك</h2>
+                <p class="section-subtext">نوفر لك بيئة عمل متكاملة تتولى المبيعات بالكامل لتركز أنت على توسعة شبكتك.</p>
+            </div>
+
+            <div class="features-grid">
+                <!-- Card 1 -->
+                <div class="feature-card">
+                    <div class="feature-icon-bubble">🎓</div>
+                    <h3 class="feature-title">أتمتة البيع الفوري</h3>
+                    <p class="feature-desc">
+                        استقبال إشعارات التحويل المالي عبر الرسائل القصيرة (SMS) ورسائل الواتساب وصرف كروت الإنترنت المناسبة للمشتركين تلقائياً وفي ثوانٍ معدودة دون تدخل منك.
+                    </p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="feature-card">
+                    <div class="feature-icon-bubble">🤝</div>
+                    <h3 class="feature-title">دعم شامل للمحافظ</h3>
+                    <p class="feature-desc">
+                        توافق شامل ودقيق مع أشهر المحافظ والبنوك في اليمن: محفظة جيب (Jeep)، فلوسك، جوالي، ون كاش، الكريمي كاش (حاسب / مميز)، ومختلف شبكات التحويل.
+                    </p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="feature-card">
+                    <div class="feature-icon-bubble">⚙️</div>
+                    <h3 class="feature-title">إدارة المخزون والتقارير</h3>
+                    <p class="feature-desc">
+                        متابعة دقيقة لمخزون الفئات في سيرفر المايكروتك، تنبيهات عند نفاد فئة معينة، كشف حسابات الموزعين والمشتركين الآجلين، وتقارير أرباح وإحصائيات يومية وشهرية.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Plans Showcase Section (💎 باقات وأسعار الاشتراك) -->
+        <section class="section-plans container" id="plans">
+            <div class="section-head text-center">
+                <div class="section-badge-pill">💎 باقات الاشتراك</div>
+                <h2 class="section-heading">اختر الباقة المناسبة لاحتياجات ونشاط شبكتك</h2>
+                <p class="section-subtext">جميع الباقات تشمل كافة المميزات المتقدمة دون أي قيود على عدد العمليات.</p>
+            </div>
+
+            <div class="plans-grid">
+                <!-- Plan 1 -->
+                <div class="plan-card">
+                    <div class="plan-ribbon-placeholder"></div>
+                    <h4 class="plan-name">اشتراك شهر</h4>
+                    <div class="plan-price">2,500 <span class="currency">ريال يمني</span></div>
+                    <div class="plan-period">مدة الصلاحية: 30 يومًا</div>
+                    <ul class="plan-features">
+                        <li>✓ عمليات تحويل وبيع غير محدودة</li>
+                        <li>✓ استقبال رسائل جميع المحافظ اليمنية</li>
+                        <li>✓ دعم كامل للشريحة والـ WhatsApp</li>
+                        <li>✓ تحديثات وتقارير يومية وشهرية</li>
+                    </ul>
+                    <a href="activate.html?plan=month" class="btn-leaf-green select-plan-btn">طلب هذه الباقة والربط ←</a>
+                </div>
+
+                <!-- Plan 2 (Popular) -->
+                <div class="plan-card popular-plan selected">
+                    <div class="plan-ribbon">الأكثر توفيراً ⭐</div>
+                    <h4 class="plan-name">اشتراك 6 أشهر</h4>
+                    <div class="plan-price">5,000 <span class="currency">ريال يمني</span></div>
+                    <div class="plan-period">مدة الصلاحية: 180 يومًا (6 أشهر)</div>
+                    <ul class="plan-features">
+                        <li>✓ كل مميزات الباقة الشهرية</li>
+                        <li>✓ توفير أكثر من 60% مقارنة بالدفع الشهري</li>
+                        <li>✓ أولوية الدعم الفني والمتابعة الفورية</li>
+                        <li>✓ دعم النسخ الاحتياطي السحابي</li>
+                    </ul>
+                    <a href="activate.html?plan=6months" class="btn-leaf-green select-plan-btn">طلب هذه الباقة والربط ←</a>
+                </div>
+
+                <!-- Plan 3 -->
+                <div class="plan-card">
+                    <div class="plan-ribbon-placeholder"></div>
+                    <h4 class="plan-name">اشتراك سنة كاملة</h4>
+                    <div class="plan-price">10,000 <span class="currency">ريال يمني</span></div>
+                    <div class="plan-period">مدة الصلاحية: 365 يومًا (سنة كاملة)</div>
+                    <ul class="plan-features">
+                        <li>✓ عام كامل من راحة البال التامة والاستقرار</li>
+                        <li>✓ دعم فني وتحديثات مستمرة طوال العام</li>
+                        <li>✓ إدارة الموزعين والحسابات الآجلة المتقدمة</li>
+                        <li>✓ توفير اقتصادي ممتاز لأصحاب الشبكات الكبرى</li>
+                    </ul>
+                    <a href="activate.html?plan=year" class="btn-leaf-green select-plan-btn">طلب هذه الباقة والربط ←</a>
+                </div>
+
+                <!-- Plan 4 -->
+                <div class="plan-card lifetime-plan">
+                    <div class="plan-ribbon lifetime-ribbon">مدى الحياة 👑</div>
+                    <h4 class="plan-name">اشتراك دائم</h4>
+                    <div class="plan-price">50,000 <span class="currency">ريال يمني</span></div>
+                    <div class="plan-period">صلاحية دائمة بدون تجديد دوري إطلاقاً</div>
+                    <ul class="plan-features">
+                        <li>✓ ترخيص دائم غير منتهي لجهازك المسجل</li>
+                        <li>✓ كافة التحديثات والمميزات المستقبلية مجاناً</li>
+                        <li>✓ أولوية دعم VIP مباشرة من مطور النظام</li>
+                        <li>✓ لا رسوم شهرية أو سنوية لاحقاً نهائياً</li>
+                    </ul>
+                    <a href="activate.html?plan=lifetime" class="btn-leaf-green select-plan-btn">طلب هذه الباقة والربط ←</a>
+                </div>
+            </div>
+
+            <div class="plans-bottom-cta text-center">
+                <p>هل لديك كود ربط جاهز من التطبيق وتريد التفعيل مباشرة؟</p>
+                <a href="activate.html" class="btn-hero-outline plans-direct-btn">ادخل كود الربط لتفعيل التطبيق الآن 🔗</a>
+            </div>
+        </section>
+
+        <!-- 6. Statistics Section (🔢 أرقام وإحصائيات المنظومة - 3 بطاقات عريضة مستطيلة كما في النموذج) -->
+        <section class="section-stats container">
+            <div class="section-head text-center">
+                <div class="section-badge-pill">🔢 أرقام وإحصائيات المنظومة</div>
+                <h2 class="section-heading">إنجازات وأرقام تفخر بها شبكات جيب كارت</h2>
+            </div>
+
+            <div class="stats-cards-grid">
+                <!-- Stat Card 1 -->
+                <div class="stat-feature-card">
+                    <div class="stat-number">3000+</div>
+                    <div class="stat-title">عميل ومستخدم مستفيد</div>
+                    <p class="stat-desc">مشتركون ومستخدمون يعتمدون على سرعة الصرف التلقائي يومياً عبر شبكاتنا المعتمدة.</p>
+                </div>
+
+                <!-- Stat Card 2 -->
+                <div class="stat-feature-card">
+                    <div class="stat-number">150+</div>
+                    <div class="stat-title">شبكة إنترنت معتمدة</div>
+                    <p class="stat-desc">شبكة إنترنت ومايكروتك تعمل بأمان وكفاءة تامة في مختلف المحافظات والمناطق اليمنية.</p>
+                </div>
+
+                <!-- Stat Card 3 -->
+                <div class="stat-feature-card">
+                    <div class="stat-number">200+ ألف</div>
+                    <div class="stat-title">كرت تم صرفه آلياً</div>
+                    <p class="stat-desc">عملية بيع وصرف ناجحة تمت بدقة متناهية ودون أي خطأ أو تأخير في استلام الكرت.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Blue CTA Banner (بانر الدعوة للعمل الأزرق الملكي العريض) -->
+        <section class="section-cta-banner container">
+            <div class="cta-banner-box">
+                <div class="cta-banner-decor"></div>
+                <div class="cta-banner-content">
+                    <h2 class="cta-banner-title">كُن شريكاً في النجاح ... ابدأ أتمتة شبكتك الآن!</h2>
+                    <p class="cta-banner-desc">
+                        انضم الآن إلى نخبة شبكات الإنترنت في اليمن التي وفرت آلاف الساعات وتخلصت من الإشراف اليدوي المرهق. 50 عملية مجانية بانتظارك!
+                    </p>
+                    <a href="activate.html" class="btn-leaf-green btn-cta-banner">
+                        <span>اربط جهازك الآن</span>
+                        <span class="btn-arrow">←</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. Contact Section (تواصل معنا - رقم التواصل المحدث 735717710) -->
+        <section class="section-contact container" id="contact">
+            <div class="section-head text-center">
+                <div class="section-badge-pill">📞 تواصل معنا</div>
+                <h2 class="section-heading">فريق الدعم الفني في خدمتكم دائماً</h2>
+                <p class="section-subtext">يسعدنا الإجابة على استفساراتكم ومساعدتكم في تهيئة وربط شبكاتكم.</p>
+            </div>
+
+            <div class="contact-cards-grid">
+                <div class="contact-info-card">
+                    <div class="contact-icon">📱</div>
+                    <h4>الاتصال والواتساب المباشر</h4>
+                    <p class="contact-value" dir="ltr">
+                        <a href="tel:+967735717710">+967 735 717 710</a>
+                    </p>
+                    <span class="contact-note">متاح للرد والاستشارات على مدار الساعة</span>
+                    <div class="contact-link-wrap">
+                        <a href="https://wa.me/967735717710" target="_blank" class="btn-contact-action">محادثة واتساب مباشرة 💬</a>
+                    </div>
+                </div>
+                <div class="contact-info-card">
+                    <div class="contact-icon">💬</div>
+                    <h4>قناة ومجموعة الدعم</h4>
+                    <p class="contact-value">تليجرام / واتساب</p>
+                    <span class="contact-note">شروحات وتحديثات مستمرة لمنظومة جيب كارت</span>
+                    <div class="contact-link-wrap">
+                        <a href="https://wa.me/967735717710" target="_blank" class="btn-contact-action">الانضمام لمجموعة الدعم 🚀</a>
+                    </div>
+                </div>
+                <div class="contact-info-card">
+                    <div class="contact-icon">📍</div>
+                    <h4>الموقع والتغطية</h4>
+                    <p class="contact-value">الجمهورية اليمنية</p>
+                    <span class="contact-note">خدمة وتغطية لجميع المحافظات وشبكات المايكروتك</span>
+                    <div class="contact-link-wrap">
+                        <a href="activate.html" class="btn-contact-action">بدء التجربة المجانية ⚡</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 9. Footer (شريط الفوتر الكحلي الداكن مع زر الهاتف المحدث 735717710 وحقوق النشر) -->
+    <footer class="site-footer">
+        <div class="container footer-content-row">
+            <div class="footer-brand-col">
+                <div class="footer-logo">
+                    <span class="brand-icon">💳</span>
+                    <span class="footer-brand-name">جيب كارت • Jeep Card</span>
+                </div>
+                <p class="footer-tagline">
+                    المنظومة التقنية الأولى لإدارة وصرف كروت الإنترنت والمحافظ المالية في اليمن.
+                </p>
+            </div>
+
+            <!-- Social & Direct Call -->
+            <div class="footer-actions-col">
+                <div class="social-circles">
+                    <a href="https://wa.me/967735717710" target="_blank" class="social-btn whatsapp" title="واتساب">💬</a>
+                    <a href="tel:+967735717710" class="social-btn phone" title="اتصال هاتف">📞</a>
+                    <a href="order.html" class="social-btn top" title="متابعة طلب">📋</a>
+                </div>
+                <a href="tel:+967735717710" class="footer-phone-btn" dir="ltr">
+                    <span class="phone-icon">📞</span>
+                    <span class="phone-number">735 717 710</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="footer-bottom-bar">
+            <div class="container footer-bottom-container">
+                <p class="copyright-text">
+                    جميع الحقوق محفوظة © 2026 منظومة جيب كارت • هاتف التواصل: <strong>735717710</strong> • برمجة: <strong>م/ عبدالكريم رشاد سيف</strong>
+                </p>
+                <div class="footer-bottom-links">
+                    <a href="activate.html">ربط التطبيق</a>
+                    <span>•</span>
+                    <a href="order.html">تأكيد ومتابعة الطلب</a>
+                    <span>•</span>
+                    <a href="/admin" target="_blank">بوابة المالك</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        // Smooth toggle for mobile navbar
+        const navToggle = document.getElementById('nav-toggle');
+        const navMenu = document.getElementById('nav-menu');
+        if (navToggle && navMenu) {
+            navToggle.addEventListener('click', () => {
+                navMenu.classList.toggle('nav-open');
+                navToggle.classList.toggle('active');
+            });
+            navMenu.querySelectorAll('.nav-item').forEach(link => {
+                link.addEventListener('click', () => {
+                    navMenu.classList.remove('nav-open');
+                    navToggle.classList.remove('active');
+                });
+            });
+        }
+    </script>
+</body>
+</html>

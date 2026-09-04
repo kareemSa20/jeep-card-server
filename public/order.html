@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأكيد بيانات الطلب ومتابعة التفعيل | جيب كارت - Jeep Card</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Readex+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="subpage-body">
+
+    <!-- 1. Floating Pill Navbar -->
+    <div class="nav-wrapper">
+        <header class="navbar floating-pill-navbar">
+            <div class="nav-brand">
+                <a href="index.html" class="brand-link">
+                    <span class="brand-icon">💳</span>
+                    <div class="brand-title-wrap">
+                        <span class="brand-name">جيب كارت</span>
+                        <span class="brand-sub">Jeep Card</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Nav Links -->
+            <nav class="nav-menu" id="nav-menu">
+                <a href="index.html#hero" class="nav-item">الرئيسية</a>
+                <a href="index.html#about" class="nav-item">عن المنظومة</a>
+                <a href="index.html#features" class="nav-item">المميزات</a>
+                <a href="index.html#plans" class="nav-item">الباقات</a>
+                <a href="activate.html" class="nav-item">ربط التطبيق</a>
+                <a href="order.html" class="nav-item active">تأكيد ومتابعة الطلب</a>
+                <a href="index.html#contact" class="nav-item">تواصل معنا</a>
+            </nav>
+
+            <!-- Actions -->
+            <div class="nav-actions">
+                <a href="activate.html" class="btn-nav-cta">ربط جهاز جديد 🔗</a>
+                <a href="/admin" class="btn-nav-admin" target="_blank" title="لوحة تحكم مالك النظام">
+                    <span class="admin-icon">🛡️</span>
+                    <span class="admin-text">دخول المالك</span>
+                </a>
+                <button class="nav-mobile-toggle" id="nav-toggle" aria-label="القائمة">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </header>
+    </div>
+
+    <!-- 2. Page Header Hero Banner -->
+    <header class="page-header-hero">
+        <div class="container text-center">
+            <div class="hero-pill-badge">
+                <span class="sparkle">📝</span>
+                <span>الخطوة الثالثة • تأكيد البيانات وإصدار الترخيص</span>
+            </div>
+            <h1 class="page-header-title">تأكيد بيانات الطلب ومتابعة التفعيل</h1>
+            <p class="page-header-desc">
+                أدخل معلومات التواصل الخاصة بك لتسجيل الطلب لدى مالك النظام ومطابقة عملية التحويل وتفعيل التطبيق فورياً.
+            </p>
+        </div>
+
+        <div class="hero-wave-divider">
+            <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                <path d="M0,45 C280,105 450,15 720,60 C990,105 1160,25 1440,65 L1440,120 L0,120 Z" fill="#ffffff"></path>
+            </svg>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="site-main container">
+
+        <!-- Stepper Navigation -->
+        <div class="stepper-wrapper">
+            <div class="step-item active">
+                <div class="step-circle">✓</div>
+                <div class="step-title">ربط التطبيق</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-item active">
+                <div class="step-circle">✓</div>
+                <div class="step-title">اختيار الخطة</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-item active" id="step-indicator-3">
+                <div class="step-circle">3</div>
+                <div class="step-title">تأكيد وإرسال ومتابعة الطلب</div>
+            </div>
+        </div>
+
+        <!-- Selected Context Banner (Device + Plan) -->
+        <div class="order-context-box" id="order-context-box">
+            <div class="context-item">
+                <span class="context-label">كود الربط والجهاز:</span>
+                <strong class="context-val" id="order-device-summary">K7P9-X4QM (Android Device)</strong>
+            </div>
+            <div class="context-item">
+                <span class="context-label">الباقة المطلوبة:</span>
+                <strong class="context-val highlight-plan" id="order-plan-summary">اشتراك 6 أشهر (5,000 ريال يمني)</strong>
+            </div>
+            <a href="activate.html" class="btn-change-context" title="الرجوع لتعديل كود الربط أو تغيير الباقة">✏️ تعديل الباقة أو الكود</a>
+        </div>
+
+        <!-- Unpaired Prompt Box (shown only if opened without pairing) -->
+        <div class="unpaired-warning-box hidden" id="unpaired-warning">
+            <div class="warning-icon">⚠️</div>
+            <div class="warning-text">
+                <h4>لم تقم بربط تطبيقك بعد!</h4>
+                <p>يجب إدخال كود الربط الظاهر في التطبيق أولاً حتى يتم ربط الترخيص بجهازك بشكل صحيح.</p>
+            </div>
+            <a href="activate.html" class="btn-leaf-green btn-pair-now">
+                <span>الذهاب لربط التطبيق الآن</span>
+                <span class="btn-arrow">←</span>
+            </a>
+        </div>
+
+        <!-- Step 3: Order Submission Section -->
+        <div class="workflow-card" id="submit-section">
+            <div class="card-header-styled">
+                <div class="header-icon-box">📝</div>
+                <div>
+                    <h3 class="card-step-title">الخطوة الثالثة: إدخال بيانات المشترك وتأكيد الإرسال</h3>
+                    <p class="card-step-desc">أدخل معلوماتك ليتمكن مالك النظام من التواصل معك وتفعيل التطبيق فور مطابقة الدفع.</p>
+                </div>
+            </div>
+
+            <form id="order-form" class="order-form-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="customer-name">الاسم / اسم الشبكة <span class="required">*</span></label>
+                        <input type="text" id="customer-name" placeholder="مثال: شبكة النورس نت" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-phone">رقم الهاتف أو الواتساب <span class="required">*</span></label>
+                        <input type="tel" id="customer-phone" placeholder="مثال: 735717710" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="customer-notes">ملاحظات أو رقم إشعار التحويل (اختياري)</label>
+                        <textarea id="customer-notes" rows="2" placeholder="يمكنك كتابة رقم الحوالة أو اسم المحفظة التي قمت بالتحويل منها (جيب، جوالي، فلوسك، ون كاش، الكريمي...)"></textarea>
+                    </div>
+                </div>
+
+                <!-- Selected Plan Summary Banner -->
+                <div class="selected-summary-banner">
+                    <div class="summary-info">
+                        <span class="summary-label">الباقة المحددة للاشتراك:</span>
+                        <strong class="summary-plan" id="summary-plan-text">اشتراك 6 أشهر</strong>
+                    </div>
+                    <div class="summary-price-wrapper">
+                        <span class="summary-price" id="summary-price-text">5,000 ريال يمني</span>
+                    </div>
+                </div>
+
+                <div id="submit-alert" class="alert-box hidden"></div>
+
+                <button type="submit" id="submit-order-btn" class="btn-leaf-green btn-submit-order">
+                    <span class="btn-text">🚀 إرسال طلب الاشتراك الآن</span>
+                    <span class="btn-spinner hidden"></span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Live Status Tracking Section (Visible after submission or during lookup) -->
+        <div class="workflow-card hidden" id="status-tracker-section">
+            <div class="card-header-styled">
+                <div class="header-icon-box">📡</div>
+                <div>
+                    <h3 class="card-step-title">متابعة حالة طلب الاشتراك الفورية الحية</h3>
+                    <p class="card-step-desc">يتم تحديث الحالة تلقائياً كل 4 ثوانٍ فور مراجعة مالك النظام للطلب وإصدار الترخيص.</p>
+                </div>
+            </div>
+
+            <div class="tracker-body">
+                <div class="tracker-status-box" id="tracker-status-box">
+                    <div class="tracker-spinner-icon" id="tracker-icon">⏳</div>
+                    <h4 class="tracker-status-title" id="tracker-status-title">الطلب قيد المراجعة</h4>
+                    <p class="tracker-status-desc" id="tracker-status-desc">طلبك الآن بانتظار موافقة مالك النظام ومطابقة عملية الدفع وإصدار الترخيص.</p>
+                </div>
+
+                <div class="tracker-details-grid">
+                    <div class="track-detail-item">
+                        <span class="track-detail-label">رقم الطلب:</span>
+                        <strong class="track-detail-val" id="track-request-id">#---</strong>
+                    </div>
+                    <div class="track-detail-item">
+                        <span class="track-detail-label">الباقة المطلوبة:</span>
+                        <strong class="track-detail-val" id="track-plan-name">اشتراك 6 أشهر</strong>
+                    </div>
+                    <div class="track-detail-item">
+                        <span class="track-detail-label">معرف الجهاز:</span>
+                        <strong class="track-detail-val" id="track-device-id">DEV-...</strong>
+                    </div>
+                    <div class="track-detail-item">
+                        <span class="track-detail-label">كود الربط:</span>
+                        <strong class="track-detail-val" id="track-pairing-code">----</strong>
+                    </div>
+                </div>
+
+                <div class="tracker-actions">
+                    <button type="button" id="refresh-status-btn" class="btn-refresh-status">
+                        🔄 تحديث الحالة يدويًا
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Lookup Section (بحث واستعلام عن طلب سابق) -->
+        <div class="workflow-card lookup-card">
+            <div class="card-header-styled">
+                <div class="header-icon-box">🔍</div>
+                <div>
+                    <h3 class="card-step-title">متابعة واستعلام عن طلب اشتراك سابق</h3>
+                    <p class="card-step-desc">هل أرسلت طلباً سابقاً وتريد متابعة حالة التفعيل؟ أدخل رقم الطلب أو كود الربط هنا.</p>
+                </div>
+            </div>
+
+            <div class="lookup-form-row">
+                <input type="text" id="lookup-input" placeholder="أدخل كود الربط (مثال: K7P9-X4QM) أو رقم الطلب (مثال: #1842)">
+                <button type="button" id="lookup-btn" class="btn-leaf-green">
+                    <span>استعلام عن الحالة</span>
+                </button>
+            </div>
+            <div id="lookup-alert" class="alert-box hidden"></div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container footer-content-row">
+            <div class="footer-brand-col">
+                <div class="footer-logo">
+                    <span class="brand-icon">💳</span>
+                    <span class="footer-brand-name">جيب كارت • Jeep Card</span>
+                </div>
+                <p class="footer-tagline">
+                    المنظومة التقنية الأولى لإدارة وصرف كروت الإنترنت والمحافظ المالية في اليمن.
+                </p>
+            </div>
+
+            <!-- Direct Contact & Phone -->
+            <div class="footer-actions-col">
+                <div class="social-circles">
+                    <a href="https://wa.me/967735717710" target="_blank" class="social-btn whatsapp" title="واتساب المبيعات والدعم">💬</a>
+                    <a href="tel:+967735717710" class="social-btn phone" title="اتصال هاتفي">📞</a>
+                    <a href="activate.html" class="social-btn top" title="ربط التطبيق">🔗</a>
+                </div>
+                <a href="tel:+967735717710" class="footer-phone-btn" dir="ltr">
+                    <span class="phone-icon">📞</span>
+                    <span class="phone-number">735 717 710</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="footer-bottom-bar">
+            <div class="container footer-bottom-container">
+                <p class="copyright-text">
+                    جميع الحقوق محفوظة © 2026 منظومة جيب كارت • هاتف التواصل: <strong>735717710</strong> • تصميم: <strong>م/ عبدالكريم رشاد سيف</strong>
+                </p>
+                <div class="footer-bottom-links">
+                    <a href="index.html">الصفحة الرئيسية</a>
+                    <span>•</span>
+                    <a href="activate.html">ربط التطبيق</a>
+                    <span>•</span>
+                    <a href="/admin" target="_blank">بوابة المالك</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        // Mobile toggle
+        const navToggle = document.getElementById('nav-toggle');
+        const navMenu = document.getElementById('nav-menu');
+        if (navToggle && navMenu) {
+            navToggle.addEventListener('click', () => {
+                navMenu.classList.toggle('nav-open');
+                navToggle.classList.toggle('active');
+            });
+        }
+    </script>
+</body>
+</html>
