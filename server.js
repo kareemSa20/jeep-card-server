@@ -282,6 +282,53 @@ app.post('/api/device/sync-license', (req, res) => {
     }
 });
 
+/**
+ * Submit Subscription Request directly from Client Android App (إرسال طلب التفعيل إلى المالك من داخل التطبيق)
+ */
+app.post('/api/device/request-subscription', submitRequestLimiter, (req, res) => {
+    try {
+        const { deviceId, appId, hardwareModel, hardwareFingerprint, pairingCode, requestedPlan, customerName, customerPhone, notes } = req.body;
+        if (!deviceId && !pairingCode) {
+            return res.status(400).json({ success: false, message: 'معرف الجهاز أو كود الربط مطلوب' });
+        }
+
+        let code = pairingCode;
+        if (deviceId) {
+            const cleanDevId = sanitizeText(deviceId, 120);
+            const cleanAppId = sanitizeText(appId || 'com.kareemtech.cardSeller', 100);
+            const hwInfo = { model: sanitizeText(hardwareModel || '', 80), fingerprint: sanitizeText(hardwareFingerprint || '', 120) };
+            db.registerOrGetDevice(cleanDevId, cleanAppId, hwInfo);
+            if (!code) {
+                const pairing = db.createOrGetPairingCode(cleanDevId, cleanAppId);
+                code = pairing.code;
+            }
+        }
+
+        const cleanCode = sanitizeText(code, 30).toUpperCase();
+        const cleanPlan = sanitizeText(requestedPlan || 'month', 30);
+        const cleanName = sanitizeText(customerName || 'مشترك التطبيق', 100);
+        const cleanPhone = sanitizeText(customerPhone || '', 30);
+        const cleanNotes = sanitizeText(notes || '', 500);
+
+        const request = db.createSubscriptionRequest({
+            pairingCode: cleanCode,
+            requestedPlan: cleanPlan,
+            customerName: cleanName,
+            customerPhone: cleanPhone,
+            notes: cleanNotes
+        });
+
+        res.json({
+            success: true,
+            message: 'تم استلام طلب التفعيل بنجاح وإرساله إلى إدارة طلبات الاشتراكات في لوحة المالك.',
+            request,
+            requestId: request.id
+        });
+    } catch (e) {
+        res.status(400).json({ success: false, message: e.message });
+    }
+});
+
 // ──────────────── 2. Web Portal APIs (موقع الويب للعملاء) ────────────────
 
 /**
