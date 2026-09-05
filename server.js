@@ -113,11 +113,11 @@ const rawAdminRoute = (process.env.ADMIN_ROUTE || process.env.ADMIN_PATH || '/ad
 const ADMIN_ROUTE = (rawAdminRoute.startsWith('/') ? rawAdminRoute : `/${rawAdminRoute}`).replace(/\/+$/, '');
 
 // Static assets for admin panel under the secret route
-app.use(ADMIN_ROUTE, express.static(path.join(__dirname, 'public', 'admin')));
+app.use(ADMIN_ROUTE, express.static(path.join(__dirname, 'admin_panel')));
 
 // Serve admin index.html for secret route
 app.get(ADMIN_ROUTE, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+    res.sendFile(path.join(__dirname, 'admin_panel', 'index.html'));
 });
 
 // If custom ADMIN_ROUTE is set, completely block the default /admin route
