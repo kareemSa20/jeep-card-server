@@ -562,11 +562,39 @@ app.get('/api/admin/licenses', requireAdmin, (req, res) => {
 });
 
 /**
+ * Update License (Extend, Suspend, Revoke, Reactivate)
+ */
+app.post('/api/admin/licenses/:id/update', requireAdmin, (req, res) => {
+    try {
+        const licenseId = req.params.id;
+        const { action, additionalDays } = req.body;
+        const license = db.updateLicense(licenseId, { action, additionalDays });
+
+        let message = 'تم تحديث الترخيص بنجاح.';
+        if (action === 'EXTEND') {
+            message = `تم تمديد الترخيص بنجاح (+${additionalDays || 30} يوم).`;
+        } else if (action === 'SUSPEND') {
+            message = 'تم إيقاف الترخيص مؤقتاً.';
+        } else if (action === 'REVOKE') {
+            message = 'تم إلغاء الترخيص نهائياً.';
+        }
+
+        res.json({
+            success: true,
+            message,
+            license
+        });
+    } catch (e) {
+        res.status(400).json({ success: false, message: e.message });
+    }
+});
+
+/**
  * Revoke License
  */
 app.post('/api/admin/licenses/:id/revoke', requireAdmin, (req, res) => {
     try {
-        const license = db.revokeLicense(req.params.id);
+        const license = db.revokeLicense ? db.revokeLicense(req.params.id) : db.updateLicense(req.params.id, { action: 'REVOKE' });
         res.json({
             success: true,
             message: 'تم إلغاء تفعيل الترخيص بنجاح.',
