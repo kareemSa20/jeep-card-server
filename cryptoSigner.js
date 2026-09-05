@@ -41,17 +41,15 @@ function verifyLicense(license) {
 }
 
 /**
- * Generates a human-friendly pairing code like K7P9-X4QM.
+ * Generates a human-friendly pairing code matching Android app format: JC-XXXXXX (hyphen after 2 letters).
  */
 function generatePairingCode() {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Exclude 0, 1, I, O to prevent confusion
-    let part1 = '';
-    let part2 = '';
-    for (let i = 0; i < 4; i++) {
-        part1 += chars.charAt(Math.floor(Math.random() * chars.length));
-        part2 += chars.charAt(Math.floor(Math.random() * chars.length));
+    let suffix = '';
+    for (let i = 0; i < 6; i++) {
+        suffix += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return `${part1}-${part2}`;
+    return `JC-${suffix}`;
 }
 
 module.exports = {

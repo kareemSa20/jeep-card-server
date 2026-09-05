@@ -30,7 +30,7 @@ console.log('✓ Crypto signer passed!');
 // 2. Test Pairing Code Generation
 console.log('2. Testing Pairing Code Generation...');
 const code = generatePairingCode();
-assert.match(code, /^[2-9A-Z]{4}-[2-9A-Z]{4}$/, 'Pairing code must match format XXXX-XXXX');
+assert.match(code, /^JC-[2-9A-Z]{6}$/, 'Pairing code must match format JC-XXXXXX');
 console.log('✓ Pairing code generated:', code);
 
 // 3. Test Device Registration & Anti-Reinstall Ops Protection

@@ -73,13 +73,14 @@ document.addEventListener('DOMContentLoaded', () => {
             pairingInput.value = savedCode;
         }
 
-        // Auto-format K7P9-X4QM
+        // Auto-format matching Android app: JC-XXXXXX (hyphen after 2 characters)
         pairingInput.addEventListener('input', (e) => {
-            let val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            if (val.length > 4) {
-                val = val.substring(0, 4) + '-' + val.substring(4, 8);
+            let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            let formatted = raw;
+            if (raw.length > 2) {
+                formatted = raw.substring(0, 2) + '-' + raw.substring(2, 8);
             }
-            e.target.value = val;
+            e.target.value = formatted;
         });
 
         pairingInput.addEventListener('keydown', (e) => {
@@ -93,12 +94,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Verification Handler
         async function verifyPairingCode() {
-            const code = pairingInput.value.trim().toUpperCase();
+            const rawCode = pairingInput.value.trim().toUpperCase();
+            const cleanCode = rawCode.replace(/[^A-Z0-9]/g, '');
             hideAlert(pairingAlert);
 
-            if (!code || code.length < 9) {
-                showAlert(pairingAlert, 'يرجى كتابة كود الربط كاملاً بالشكل K7P9-X4QM', 'error');
+            if (!cleanCode || cleanCode.length < 6) {
+                showAlert(pairingAlert, 'يرجى كتابة كود الربط الظاهر في التطبيق بالشكل JC-XXXXXX', 'error');
                 return;
+            }
+
+            let code = rawCode;
+            if (!code.includes('-') && cleanCode.length > 2) {
+                code = cleanCode.substring(0, 2) + '-' + cleanCode.substring(2, 8);
             }
 
             setLoading(verifyBtn, verifySpinner, verifyText, true, 'جارٍ الفحص...');
@@ -185,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Auto-verify if code exists in cache
-        if (savedCode && savedCode.length === 9) {
+        if (savedCode && savedCode.replace(/[^A-Z0-9]/g, '').length >= 6) {
             verifyPairingCode();
         }
 
@@ -234,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (goToOrderBtn) {
             goToOrderBtn.addEventListener('click', () => {
                 const code = pairingInput.value.trim().toUpperCase();
-                if (!code || code.length < 9) {
+                if (!code || code.replace(/[^A-Z0-9]/g, '').length < 6) {
                     showAlert(pairingAlert, 'يرجى فحص وإدخال كود الربط أولاً.', 'error');
                     pairingInput.focus();
                     return;

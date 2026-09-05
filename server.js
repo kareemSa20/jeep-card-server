@@ -1,16 +1,102 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS for all origins (Android app & Web clients)
-app.use(cors());
-app.use(express.json());
+// ──────────────── Security Hardening ────────────────
+// 1. Disable X-Powered-By to prevent server fingerprinting
+app.disable('x-powered-by');
 
-// Serve static frontend for customers (Web Portal)
+// 2. Set strict security HTTP headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+});
+
+// 3. Body limit to prevent JSON payload flooding / memory exhaustion
+app.use(express.json({ limit: '100kb' }));
+
+// 4. CORS
+app.use(cors());
+
+// 5. In-Memory Rate Limiter (Zero-dependency protection against DDoS & Brute Force)
+const rateLimitMap = new Map();
+function createRateLimiter({ windowMs, maxRequests, message }) {
+    return (req, res, next) => {
+        const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        const key = `${req.path}:${ip}`;
+        const now = Date.now();
+        const record = rateLimitMap.get(key) || { count: 0, resetAt: now + windowMs };
+
+        if (now > record.resetAt) {
+            record.count = 1;
+            record.resetAt = now + windowMs;
+        } else {
+            record.count++;
+        }
+        rateLimitMap.set(key, record);
+
+        if (record.count > maxRequests) {
+            return res.status(429).json({
+                success: false,
+                error: 'TOO_MANY_REQUESTS',
+                message: message || 'تم تجاوز الحد الأقصى للمحاولات، يرجى الانتظار والمحاولة لاحقاً.'
+            });
+        }
+        next();
+    };
+}
+
+// Clean rate limit map every 60s
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, r] of rateLimitMap.entries()) {
+        if (now > r.resetAt) rateLimitMap.delete(k);
+    }
+}, 60000);
+
+const adminLoginLimiter = createRateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 mins
+    maxRequests: 5,           // Max 5 attempts
+    message: 'تم حظر محاولات الدخول مؤقتاً بسبب تكرار المحاولات الخاطئة. انتظر 15 دقيقة.'
+});
+
+const pairingLimiter = createRateLimiter({
+    windowMs: 60 * 1000,      // 1 min
+    maxRequests: 30,          // Max 30 attempts
+    message: 'عدد كبير من طلبات فحص الكود. يرجى الانتظار دقيقة.'
+});
+
+const submitRequestLimiter = createRateLimiter({
+    windowMs: 10 * 60 * 1000, // 10 mins
+    maxRequests: 10,          // Max 10 submissions
+    message: 'تم إرسال عدد كبير من الطلبات. يرجى الانتظار قليلاً.'
+});
+
+// Helper: Timing-safe comparison to prevent timing attacks
+function safeCompare(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// Helper: Sanitize text inputs against XSS and excessive length
+function sanitizeText(str, maxLen = 255) {
+    if (!str) return '';
+    return String(str).replace(/[<>]/g, '').trim().substring(0, maxLen);
+}
+
+// ──────────────── Serve Customer Static Pages ────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Specific Customer Pages Routes
@@ -22,16 +108,39 @@ app.get('/order', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'order.html'));
 });
 
-// Serve static frontend for admin panel
-app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
+// Admin Panel Route (Configurable via ADMIN_ROUTE or ADMIN_PATH environment variable, default /admin)
+const rawAdminRoute = (process.env.ADMIN_ROUTE || process.env.ADMIN_PATH || '/admin').trim();
+const ADMIN_ROUTE = (rawAdminRoute.startsWith('/') ? rawAdminRoute : `/${rawAdminRoute}`).replace(/\/+$/, '');
+
+// Static assets for admin panel under the secret route
+app.use(ADMIN_ROUTE, express.static(path.join(__dirname, 'public', 'admin')));
+
+// Serve admin index.html for secret route
+app.get(ADMIN_ROUTE, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+});
+
+// If custom ADMIN_ROUTE is set, completely block the default /admin route
+if (ADMIN_ROUTE !== '/admin') {
+    app.all('/admin*', (req, res) => {
+        res.status(404).send('Not Found');
+    });
+}
+
+// Helper: Get active Admin PIN (from Environment Variable or database default)
+function getAdminPin() {
+    return String(process.env.ADMIN_PIN || (db.data && db.data.admin_config && db.data.admin_config.pin) || '123456').trim();
+}
 
 // ──────────────── Helper Middleware: Admin Auth ────────────────
 function requireAdmin(req, res, next) {
     const authHeader = req.headers['authorization'] || '';
     const pinHeader = req.headers['x-admin-pin'] || '';
     const token = authHeader.replace('Bearer ', '').trim();
+    const currentPin = getAdminPin();
+    const currentToken = String((db.data && db.data.admin_config && db.data.admin_config.token) || '').trim();
 
-    if (token === db.data.admin_config.token || pinHeader === db.data.admin_config.pin) {
+    if ((token && safeCompare(token, currentToken)) || (pinHeader && safeCompare(pinHeader, currentPin))) {
         return next();
     }
     return res.status(401).json({ success: false, error: 'UNAUTHORIZED', message: 'غير مصرح بالدخول' });
@@ -51,9 +160,13 @@ app.post('/api/device/handshake', (req, res) => {
             return res.status(400).json({ success: false, error: 'MISSING_DEVICE_ID', message: 'معرف الجهاز مطلوب' });
         }
 
-        const device = db.registerOrGetDevice(deviceId, appId, hardwareInfo);
-        const pairing = db.createOrGetPairingCode(deviceId, appId, pairingCode);
-        const activeLicense = db.getActiveLicenseForDevice(deviceId);
+        const cleanDevId = sanitizeText(deviceId, 120);
+        const cleanAppId = sanitizeText(appId, 100);
+        const cleanPairing = sanitizeText(pairingCode, 20);
+
+        const device = db.registerOrGetDevice(cleanDevId, cleanAppId, hardwareInfo);
+        const pairing = db.createOrGetPairingCode(cleanDevId, cleanAppId, cleanPairing);
+        const activeLicense = db.getActiveLicenseForDevice(cleanDevId);
 
         res.json({
             success: true,
@@ -70,78 +183,40 @@ app.post('/api/device/handshake', (req, res) => {
             serverTrustedTime: Date.now()
         });
     } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: e.message });
     }
 });
 
 /**
- * Request Subscription directly from Android client app
+ * Verify License status (Online check):
+ * Returns valid signed license or notifies client if revoked or expired.
  */
-app.post('/api/device/request-subscription', (req, res) => {
+app.post('/api/device/verify-license', (req, res) => {
     try {
-        const { deviceId, pairingCode, requestedPlan, planId, customerName, clientName, customerPhone, clientPhone, notes } = req.body;
-        if (!deviceId && !pairingCode) {
-            return res.status(400).json({ success: false, message: 'معرف الجهاز أو كود الربط مطلوب' });
-        }
-
-        let effectiveCode = pairingCode;
-        if (deviceId) {
-            db.registerOrGetDevice(deviceId);
-            const pairing = db.createOrGetPairingCode(deviceId, 'com.kareemtech.cardSeller', pairingCode);
-            effectiveCode = pairing.code;
-        }
-
-        const request = db.createSubscriptionRequest({
-            pairingCode: effectiveCode,
-            requestedPlan: requestedPlan || planId || 'month',
-            customerName: customerName || clientName || 'مشترك تطبيق جيب كارت',
-            customerPhone: customerPhone || clientPhone || '',
-            notes: notes || 'طلب تفعيل مباشر من داخل التطبيق'
-        });
-
-        res.json({
-            success: true,
-            message: 'تم إرسال طلب التفعيل إلى لوحة تحكم المالك بنجاح وهو قيد المراجعة الآن.',
-            request
-        });
-    } catch (e) {
-        res.status(400).json({ success: false, message: e.message });
-    }
-});
-
-/**
- * Record operation:
- * Syncs consumed free operations from Android client to server.
- * Ensures that deleting and reinstalling the app cannot reset the 50 free ops counter!
- */
-app.post('/api/device/record-operation', (req, res) => {
-    try {
-        const { deviceId, count = 1 } = req.body;
+        const { deviceId, licenseId } = req.body;
         if (!deviceId) {
             return res.status(400).json({ success: false, error: 'MISSING_DEVICE_ID' });
         }
 
-        const activeLicense = db.getActiveLicenseForDevice(deviceId);
-        if (activeLicense) {
+        const cleanDevId = sanitizeText(deviceId, 120);
+        const activeLicense = db.getActiveLicenseForDevice(cleanDevId);
+
+        if (!activeLicense) {
+            const dev = db.getDevice(cleanDevId);
             return res.json({
                 success: true,
-                isLicensed: true,
-                activeLicense,
-                serverTrustedTime: Date.now()
+                hasActiveLicense: false,
+                status: dev ? dev.status : 'TRIAL',
+                usedFreeOps: dev ? dev.usedFreeOps : 0,
+                freeOpsRemaining: dev ? Math.max(0, dev.totalFreeOpsLimit - dev.usedFreeOps) : 50,
+                message: 'لا يوجد ترخيص مدفوع نشط لجهازك.'
             });
         }
 
-        const result = db.updateDeviceOps(deviceId, count);
-        if (!result) {
-            return res.status(404).json({ success: false, error: 'DEVICE_NOT_FOUND' });
-        }
-
         res.json({
             success: true,
-            isLicensed: false,
-            usedFreeOps: result.usedFreeOps,
-            freeOpsRemaining: result.freeOpsRemaining,
-            isExhausted: result.isExhausted,
+            hasActiveLicense: true,
+            license: activeLicense,
             serverTrustedTime: Date.now()
         });
     } catch (e) {
@@ -150,23 +225,56 @@ app.post('/api/device/record-operation', (req, res) => {
 });
 
 /**
- * Check License:
- * Periodic background license verification and refresh.
+ * Report Consumed Free Operation:
+ * Anti-Tamper & Anti-Reset mechanism.
+ * The app reports every operation consumed so user cannot reinstall to regain 50 free ops.
  */
-app.post('/api/device/check-license', (req, res) => {
+app.post('/api/device/consume-ops', (req, res) => {
+    try {
+        const { deviceId, count } = req.body;
+        if (!deviceId) {
+            return res.status(400).json({ success: false, error: 'MISSING_DEVICE_ID' });
+        }
+
+        const cleanDevId = sanitizeText(deviceId, 120);
+        const increment = Math.max(1, parseInt(count, 10) || 1);
+        const device = db.consumeDeviceFreeOp(cleanDevId, increment);
+
+        res.json({
+            success: true,
+            usedFreeOps: device.usedFreeOps,
+            freeOpsRemaining: Math.max(0, device.totalFreeOpsLimit - device.usedFreeOps),
+            isExhausted: device.usedFreeOps >= device.totalFreeOpsLimit
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+/**
+ * Sync Active License manually (زر مزامنة الترخيص في التطبيق):
+ */
+app.post('/api/device/sync-license', (req, res) => {
     try {
         const { deviceId } = req.body;
-        if (!deviceId) return res.status(400).json({ success: false, error: 'MISSING_DEVICE_ID' });
+        if (!deviceId) {
+            return res.status(400).json({ success: false, error: 'MISSING_DEVICE_ID' });
+        }
 
-        const device = db.getDevice(deviceId);
-        const activeLicense = db.getActiveLicenseForDevice(deviceId);
+        const cleanDevId = sanitizeText(deviceId, 120);
+        const activeLicense = db.getActiveLicenseForDevice(cleanDevId);
+        const device = db.getDevice(cleanDevId);
+
+        if (!device) {
+            return res.status(404).json({ success: false, error: 'DEVICE_NOT_FOUND', message: 'الجهاز غير مسجل' });
+        }
 
         res.json({
             success: true,
-            status: activeLicense ? 'ACTIVE' : (device ? device.status : 'UNKNOWN'),
-            activeLicense: activeLicense || null,
-            usedFreeOps: device ? device.usedFreeOps : 0,
-            freeOpsRemaining: device ? Math.max(0, device.totalFreeOpsLimit - device.usedFreeOps) : 0,
+            hasActiveLicense: !!activeLicense,
+            license: activeLicense || null,
+            deviceStatus: device.status,
+            usedFreeOps: device.usedFreeOps,
             serverTrustedTime: Date.now()
         });
     } catch (e) {
@@ -174,19 +282,21 @@ app.post('/api/device/check-license', (req, res) => {
     }
 });
 
-// ──────────────── 2. Customer Web Portal APIs (موقع الويب) ────────────────
+// ──────────────── 2. Web Portal APIs (موقع الويب للعملاء) ────────────────
 
 /**
- * Verify Pairing Code entered by customer on website
+ * Verify Pairing Code entered by customer on web page
  */
-app.post('/api/web/verify-pairing', (req, res) => {
+app.post('/api/web/verify-pairing', pairingLimiter, (req, res) => {
     try {
         const { code } = req.body;
-        if (!code) {
-            return res.status(400).json({ success: false, error: 'MISSING_CODE', message: 'يرجى إدخال كود الربط' });
+        if (!code || typeof code !== 'string') {
+            return res.status(400).json({ success: false, message: 'كود الربط مطلوب' });
         }
 
-        const result = db.getDeviceByPairingCode(code);
+        const cleanCode = sanitizeText(code, 30);
+        const result = db.getDeviceByPairingCode(cleanCode);
+
         if (!result) {
             return res.status(404).json({ success: false, error: 'INVALID_CODE', message: 'كود الربط غير صحيح، تحقق من الكود في التطبيق.' });
         }
@@ -207,19 +317,25 @@ app.post('/api/web/verify-pairing', (req, res) => {
 /**
  * Submit Subscription Request from website
  */
-app.post('/api/web/submit-request', (req, res) => {
+app.post('/api/web/submit-request', submitRequestLimiter, (req, res) => {
     try {
         const { pairingCode, requestedPlan, customerName, customerPhone, notes } = req.body;
         if (!pairingCode || !requestedPlan) {
             return res.status(400).json({ success: false, message: 'يرجى تحديد كود الربط والباقة المطلوبة.' });
         }
 
+        const cleanCode = sanitizeText(pairingCode, 25).toUpperCase();
+        const cleanPlan = sanitizeText(requestedPlan, 30);
+        const cleanName = sanitizeText(customerName, 100);
+        const cleanPhone = sanitizeText(customerPhone, 30);
+        const cleanNotes = sanitizeText(notes, 500);
+
         const request = db.createSubscriptionRequest({
-            pairingCode,
-            requestedPlan,
-            customerName,
-            customerPhone,
-            notes
+            pairingCode: cleanCode,
+            requestedPlan: cleanPlan,
+            customerName: cleanName,
+            customerPhone: cleanPhone,
+            notes: cleanNotes
         });
 
         res.json({
@@ -235,9 +351,10 @@ app.post('/api/web/submit-request', (req, res) => {
 /**
  * Get status of an existing request
  */
-app.get('/api/web/request-status/:id', (req, res) => {
+app.get('/api/web/request-status/:id', pairingLimiter, (req, res) => {
     try {
-        const id = req.params.id.startsWith('#') ? req.params.id : `#${req.params.id}`;
+        const rawId = sanitizeText(req.params.id, 20);
+        const id = rawId.startsWith('#') ? rawId : `#${rawId}`;
         const request = db.getRequestById(id);
         if (!request) {
             return res.status(404).json({ success: false, message: 'الطلب غير موجود' });
@@ -251,18 +368,21 @@ app.get('/api/web/request-status/:id', (req, res) => {
 /**
  * Lookup request by ID or Pairing Code
  */
-app.get('/api/web/request-lookup', (req, res) => {
+app.get('/api/web/request-lookup', pairingLimiter, (req, res) => {
     try {
-        const query = (req.query.q || '').trim();
+        const query = sanitizeText(req.query.q || '', 40);
         if (!query) {
             return res.status(400).json({ success: false, message: 'يرجى إدخال كود الربط أو رقم الطلب' });
         }
         const normalizedId = query.startsWith('#') ? query : `#${query}`;
         let request = db.getRequestById(normalizedId);
         if (!request) {
-            const code = query.toUpperCase();
+            const cleanCode = query.replace(/[^A-Z0-9]/g, '').toUpperCase();
             const allReqs = Object.values(db.data.subscription_requests || {});
-            request = allReqs.filter(r => (r.pairingCode || '').toUpperCase() === code).sort((a, b) => b.createdAt - a.createdAt)[0];
+            request = allReqs.filter(r => {
+                const reqCode = (r.pairingCode || '').replace(/[^A-Z0-9]/g, '').toUpperCase();
+                return reqCode === cleanCode;
+            }).sort((a, b) => b.createdAt - a.createdAt)[0];
         }
         if (!request) {
             return res.status(404).json({ success: false, message: 'لم يتم العثور على أي طلب مطابق.' });
@@ -276,11 +396,13 @@ app.get('/api/web/request-lookup', (req, res) => {
 // ──────────────── 3. Owner / Admin Control Panel APIs ────────────────
 
 /**
- * Admin Login
+ * Admin Login (Rate limited & Timing-safe)
  */
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', adminLoginLimiter, (req, res) => {
     const { pin } = req.body;
-    if (pin === db.data.admin_config.pin) {
+    const currentPin = getAdminPin();
+
+    if (pin && safeCompare(String(pin).trim(), currentPin)) {
         return res.json({
             success: true,
             token: db.data.admin_config.token,
@@ -320,14 +442,14 @@ app.get('/api/admin/requests', requireAdmin, (req, res) => {
  */
 app.post('/api/admin/requests/:id/approve', requireAdmin, (req, res) => {
     try {
-        const id = req.params.id.startsWith('#') ? req.params.id : `#${req.params.id}`;
         const { grantedPlan, grantedDays, adminNotes } = req.body;
+        const result = db.approveRequest(req.params.id, { grantedPlan, grantedDays, adminNotes });
 
-        const result = db.approveRequest(id, { grantedPlan, grantedDays, adminNotes });
         res.json({
             success: true,
-            message: `تم تفعيل الاشتراك للطلب ${id} بنجاح وإصدار الترخيص.`,
-            ...result
+            message: `تم اعتماد الطلب وتفعيل ترخيص الجهاز بنجاح (${result.request.grantedDays} يوم).`,
+            request: result.request,
+            license: result.license
         });
     } catch (e) {
         res.status(400).json({ success: false, message: e.message });
@@ -339,13 +461,11 @@ app.post('/api/admin/requests/:id/approve', requireAdmin, (req, res) => {
  */
 app.post('/api/admin/requests/:id/reject', requireAdmin, (req, res) => {
     try {
-        const id = req.params.id.startsWith('#') ? req.params.id : `#${req.params.id}`;
         const { reason } = req.body;
-
-        const request = db.rejectRequest(id, reason);
+        const request = db.rejectRequest(req.params.id, reason);
         res.json({
             success: true,
-            message: `تم رفض الطلب ${id}.`,
+            message: 'تم رفض طلب الاشتراك.',
             request
         });
     } catch (e) {
@@ -354,34 +474,7 @@ app.post('/api/admin/requests/:id/reject', requireAdmin, (req, res) => {
 });
 
 /**
- * List all Licenses
- */
-app.get('/api/admin/licenses', requireAdmin, (req, res) => {
-    try {
-        const licenses = db.getAllLicenses();
-        res.json({ success: true, licenses });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-/**
- * Update License (Extend, Suspend, Revoke, Reactivate)
- */
-app.post('/api/admin/licenses/:id/update', requireAdmin, (req, res) => {
-    try {
-        const licenseId = req.params.id;
-        const { action, additionalDays } = req.body;
-
-        const license = db.updateLicense(licenseId, { action, additionalDays });
-        res.json({ success: true, license, message: 'تم تحديث الترخيص بنجاح' });
-    } catch (e) {
-        res.status(400).json({ success: false, message: e.message });
-    }
-});
-
-/**
- * List all Devices Fleet
+ * List Devices
  */
 app.get('/api/admin/devices', requireAdmin, (req, res) => {
     try {
@@ -393,24 +486,62 @@ app.get('/api/admin/devices', requireAdmin, (req, res) => {
 });
 
 /**
- * Adjust Device 50 Free Ops Counter
+ * Adjust device used free operations limit manually
  */
 app.post('/api/admin/devices/:id/adjust-ops', requireAdmin, (req, res) => {
     try {
-        const deviceId = req.params.id;
         const { usedOps } = req.body;
-        const device = db.resetOrAdjustDeviceOps(deviceId, usedOps);
-        res.json({ success: true, device, message: 'تم تعديل عداد العمليات بنجاح' });
+        const device = db.adjustDeviceOps(req.params.id, usedOps);
+        res.json({
+            success: true,
+            message: `تم ضبط رصيد العمليات المجانية للجهاز بنجاح (${device.usedFreeOps} مستخدمة).`,
+            device
+        });
     } catch (e) {
         res.status(400).json({ success: false, message: e.message });
     }
 });
 
-// Start Server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`====================================================`);
+/**
+ * List Licenses
+ */
+app.get('/api/admin/licenses', requireAdmin, (req, res) => {
+    try {
+        const licenses = db.getAllLicenses();
+        res.json({ success: true, licenses });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+/**
+ * Revoke License
+ */
+app.post('/api/admin/licenses/:id/revoke', requireAdmin, (req, res) => {
+    try {
+        const license = db.revokeLicense(req.params.id);
+        res.json({
+            success: true,
+            message: 'تم إلغاء تفعيل الترخيص بنجاح.',
+            license
+        });
+    } catch (e) {
+        res.status(400).json({ success: false, message: e.message });
+    }
+});
+
+// ──────────────── Start Server ────────────────
+app.listen(PORT, () => {
+    console.log('====================================================');
     console.log(`🚀 Jeep Card Backend Server is running on port ${PORT}`);
     console.log(`🌐 Customer Web Portal: http://localhost:${PORT}`);
-    console.log(`🛡️ Owner Admin Dashboard: http://localhost:${PORT}/admin`);
-    console.log(`====================================================`);
+    console.log(`🛡️ Owner Admin Dashboard: http://localhost:${PORT}${ADMIN_ROUTE}`);
+    if (ADMIN_ROUTE !== '/admin') {
+        console.log(`🔒 Custom Secret Admin Path active: ${ADMIN_ROUTE} (default /admin disabled)`);
+    }
+    if (process.env.ADMIN_PIN) {
+        console.log(`🔒 Custom Admin PIN active from Environment Variable`);
+    }
+    console.log('🔒 Security headers, rate limiting & sanitization ACTIVE');
+    console.log('====================================================');
 });

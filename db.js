@@ -197,7 +197,20 @@ class Database {
     getDeviceByPairingCode(code) {
         if (!code) return null;
         const normalized = code.trim().toUpperCase();
-        const pairing = this.data.pairing_codes[normalized];
+        let pairing = this.data.pairing_codes[normalized];
+
+        // If not found by exact string, search by stripped alphanumeric
+        if (!pairing) {
+            const cleanCode = normalized.replace(/[^A-Z0-9]/g, '');
+            for (const [key, p] of Object.entries(this.data.pairing_codes)) {
+                const cleanKey = key.replace(/[^A-Z0-9]/g, '');
+                if (cleanKey === cleanCode) {
+                    pairing = p;
+                    break;
+                }
+            }
+        }
+
         if (!pairing) return null;
 
         const now = Date.now();
