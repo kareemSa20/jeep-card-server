@@ -151,10 +151,39 @@
                     </div>
                 </div>
 
+                <!-- Deposit Instruction Card -->
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1.5px dashed #10b981; border-radius: 12px; padding: 18px; margin: 18px 0;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <span style="font-size:22px;">💳</span>
+                        <strong style="color:#10b981; font-size:16px;">بيانات إيداع رسوم الاشتراك</strong>
+                    </div>
+                    <p style="color:#cbd5e1; font-size:13px; line-height:1.6; margin-bottom:12px;">
+                        أودع الآن رسوم الباقة المختارة على هذا الرقم قبل أن تقوم بتأكيد الطلب:
+                    </p>
+                    <div style="display:flex; align-items:center; justify-content:space-between; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px 16px; margin-bottom:10px;">
+                        <div>
+                            <span style="font-size:11px; color:#94a3b8; display:block;">رقم إيداع المالك (محفظة / اتصال):</span>
+                            <strong style="font-size:22px; color:#38bdf8; letter-spacing:1px; font-family:monospace;" id="deposit-phone-val">735717710</strong>
+                        </div>
+                        <button type="button" onclick="navigator.clipboard.writeText('735717710'); alert('✓ تم نسخ رقم الإيداع: 735717710');" style="background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid rgba(56, 189, 248, 0.4); padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px;">
+                            📋 نسخ الرقم
+                        </button>
+                    </div>
+                    <span style="color:#94a3b8; font-size:12px; display:block;">(عبر المحافظ أو الحوالات: ون كاش، فلوسك، جيب، جوالي، كاش، الكريمي...)</span>
+                </div>
+
+                <!-- Deposit Confirmation Checkbox -->
+                <div style="margin: 16px 0; display:flex; align-items:center; gap:12px; background:rgba(30, 41, 59, 0.8); padding:14px 16px; border-radius:10px; border:1px solid #334155;">
+                    <input type="checkbox" id="deposit-confirmed-check" required style="width:20px; height:20px; accent-color:#10b981; cursor:pointer;">
+                    <label for="deposit-confirmed-check" style="color:#f8fafc; font-size:14px; font-weight:bold; cursor:pointer;">
+                        هل قمت بالإيداع؟ <span style="font-weight:normal; color:#cbd5e1;">(نعم، قمت بالإيداع وتحويل المبلغ إلى هذا الرقم 735717710) *</span>
+                    </label>
+                </div>
+
                 <div id="submit-alert" class="alert-box hidden"></div>
 
                 <button type="submit" id="submit-order-btn" class="btn-leaf-green btn-submit-order">
-                    <span class="btn-text">🚀 إرسال طلب الاشتراك الآن</span>
+                    <span class="btn-text">🚀 إرسال وتأكيد طلب الاشتراك الآن</span>
                     <span class="btn-spinner hidden"></span>
                 </button>
             </form>

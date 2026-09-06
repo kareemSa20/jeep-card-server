@@ -562,6 +562,38 @@ app.get('/api/admin/licenses', requireAdmin, (req, res) => {
 });
 
 /**
+ * Issue License directly by Pairing Code
+ */
+app.post('/api/admin/licenses/create-by-code', requireAdmin, (req, res) => {
+    try {
+        const { pairingCode, plan, days, adminNotes } = req.body;
+        if (!pairingCode) {
+            return res.status(400).json({ success: false, message: 'يرجى إدخال رمز الاقتران' });
+        }
+
+        const cleanCode = sanitizeText(pairingCode, 30).toUpperCase();
+        const cleanPlan = sanitizeText(plan, 30);
+        const cleanNotes = sanitizeText(adminNotes, 300);
+
+        const result = db.issueLicenseByPairingCode({
+            pairingCode: cleanCode,
+            plan: cleanPlan,
+            days: days,
+            adminNotes: cleanNotes
+        });
+
+        res.json({
+            success: true,
+            message: `تم إصدار وتفعيل الترخيص بنجاح للجهاز (${result.device ? result.device.deviceId : ''}).`,
+            license: result.license,
+            device: result.device
+        });
+    } catch (e) {
+        res.status(400).json({ success: false, message: e.message });
+    }
+});
+
+/**
  * Update License (Extend, Suspend, Revoke, Reactivate)
  */
 app.post('/api/admin/licenses/:id/update', requireAdmin, (req, res) => {

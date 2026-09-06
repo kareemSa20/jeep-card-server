@@ -394,13 +394,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderLicensesTable(licenses) {
         const tbody = document.getElementById('licenses-tbody');
         if (!licenses || licenses.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="empty-state">لا توجد تراخيص مصدرة حتى الآن.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="empty-state">لا توجد تراخيص مصدرة حتى الآن.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = licenses.map(l => `
             <tr>
                 <td><code>${l.id}</code></td>
+                <td><strong style="color:#38bdf8; font-family:monospace; font-size:13px;">${l.pairingCode || '-'}</strong></td>
                 <td><span style="font-family:monospace; font-size:11px;">${l.deviceId.substring(0, 12)}...</span></td>
                 <td><strong>${l.planName || l.plan}</strong></td>
                 <td>${formatDate(l.startAt)}</td>
@@ -428,7 +429,152 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.setExtendDays = function(days) {
-        document.getElementById('extend-days-input').value = days;
+        document.getElementById('license-extend-days').value = days;
+    };
+
+    // ──────────────── Direct License Issuance Modal by Pairing Code ────────────────
+    window.openDirectLicenseModal = function() {
+        const modal = document.getElementById('direct-license-modal');
+        if (modal) modal.classList.remove('hidden');
+        const codeInput = document.getElementById('modal-lic-code');
+        if (codeInput) {
+            codeInput.value = '';
+            codeInput.focus();
+        }
+    };
+
+    window.closeDirectLicenseModal = function() {
+        const modal = document.getElementById('direct-license-modal');
+        if (modal) modal.classList.add('hidden');
+    };
+
+    window.handleModalPlanChange = function() {
+        const plan = document.getElementById('modal-lic-plan').value;
+        const daysInput = document.getElementById('modal-lic-days');
+        if (!daysInput) return;
+        if (plan === 'month') daysInput.value = 30;
+        else if (plan === '6months') daysInput.value = 180;
+        else if (plan === 'year') daysInput.value = 365;
+        else if (plan === 'lifetime') daysInput.value = 36500;
+    };
+
+    window.submitModalDirectLicense = async function() {
+        if (!adminToken) return;
+        const codeInput = document.getElementById('modal-lic-code');
+        const planSelect = document.getElementById('modal-lic-plan');
+        const daysInput = document.getElementById('modal-lic-days');
+        const notesInput = document.getElementById('modal-lic-notes');
+
+        const code = codeInput ? codeInput.value.trim() : '';
+        const plan = planSelect ? planSelect.value : 'month';
+        const days = parseInt(daysInput ? daysInput.value : '30', 10) || 30;
+        const notes = notesInput ? notesInput.value.trim() : '';
+
+        if (!code) {
+            alert('يرجى إدخال كود الربط الخاص بجهاز العميل.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-modal-issue-license');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'جارٍ التفعيل...';
+        }
+
+        try {
+            const res = await fetch('/api/admin/licenses/create-by-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                },
+                body: JSON.stringify({
+                    pairingCode: code,
+                    plan: plan,
+                    days: days,
+                    adminNotes: notes
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(`✓ ${data.message}\nمعرف الترخيص الجديد: ${data.license ? data.license.id : ''}`);
+                closeDirectLicenseModal();
+                loadAllData();
+            } else {
+                alert(`❌ تعذر التفعيل: ${data.message || 'حدث خطأ'}`);
+            }
+        } catch (e) {
+            alert('تعذر الاتصال بالخادم.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'تفعيل';
+            }
+        }
+    };
+
+    window.handleDirectPlanChange = function() {
+        const plan = document.getElementById('direct-lic-plan').value;
+        const daysInput = document.getElementById('direct-lic-days');
+        if (plan === 'month') daysInput.value = 30;
+        else if (plan === '6months') daysInput.value = 180;
+        else if (plan === 'year') daysInput.value = 365;
+        else if (plan === 'lifetime') daysInput.value = 36500;
+    };
+
+    window.resetDirectLicenseForm = function() {
+        document.getElementById('direct-lic-code').value = '';
+        document.getElementById('direct-lic-plan').value = 'month';
+        document.getElementById('direct-lic-days').value = 30;
+        document.getElementById('direct-lic-notes').value = '';
+    };
+
+    window.submitDirectLicense = async function() {
+        if (!adminToken) return;
+        const code = document.getElementById('direct-lic-code').value.trim();
+        const plan = document.getElementById('direct-lic-plan').value;
+        const days = parseInt(document.getElementById('direct-lic-days').value, 10) || 30;
+        const notes = document.getElementById('direct-lic-notes').value.trim();
+
+        if (!code) {
+            alert('يرجى إدخال كود اقتران الجهاز (Pairing Code).');
+            return;
+        }
+
+        const btn = document.getElementById('btn-direct-issue-license');
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> جارٍ التفعيل والإصدار...';
+
+        try {
+            const res = await fetch('/api/admin/licenses/create-by-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                },
+                body: JSON.stringify({
+                    pairingCode: code,
+                    plan: plan,
+                    days: days,
+                    adminNotes: notes
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(`✓ ${data.message}\nمعرف الترخيص: ${data.license ? data.license.id : ''}`);
+                resetDirectLicenseForm();
+                loadAllData();
+            } else {
+                alert(`❌ فشل تفعيل الترخيص: ${data.message || 'حدث خطأ غير معروف'}`);
+            }
+        } catch (e) {
+            alert('تعذر الاتصال بالخادم، يرجى التأكد من تشغيل السيرفر.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<span>🔑</span> تفعيل وإصدار الترخيص الآن';
+        }
     };
 
     window.executeLicenseAction = async function(action) {
@@ -475,9 +621,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderDevicesTable(devices) {
+        const countEl = document.getElementById('total-devices-count');
+        if (countEl) countEl.textContent = devices ? devices.length : 0;
+
         const tbody = document.getElementById('devices-tbody');
         if (!devices || devices.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="empty-state">لا توجد أجهزة مسجلة حتى الآن.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="empty-state">لا توجد أجهزة مسجلة حتى الآن.</td></tr>`;
             return;
         }
 
@@ -485,7 +634,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr>
                 <td><code>${d.deviceId}</code></td>
                 <td><strong>${d.hardwareModel || 'Android'}</strong></td>
-                <td><span style="font-size:11px;">${d.appId}</span></td>
+                <td><strong style="color:#38bdf8; font-family:monospace; font-size:13px;">${d.pairingCode || '-'}</strong></td>
+                <td>${d.license ? `<span class="badge badge-approved">${d.license.planName || d.license.plan}</span>` : '<span class="badge badge-pending">تجريبي</span>'}</td>
                 <td><span style="color:#f87171; font-weight:800;">${d.usedFreeOps} عملية</span></td>
                 <td><span style="color:#34d399; font-weight:800;">${d.freeOpsRemaining} متبقية</span></td>
                 <td>${getStatusBadge(d.status)}</td>

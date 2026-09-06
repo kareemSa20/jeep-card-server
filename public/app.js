@@ -332,6 +332,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const depositCheck = document.getElementById('deposit-confirmed-check');
+            if (depositCheck && !depositCheck.checked) {
+                showAlert(submitAlert, 'يرجى إتمام الإيداع أولاً والتأشير على مربع "هل قمت بالإيداع؟" قبل المتابعة.', 'error');
+                return;
+            }
+
             setLoading(submitBtn, submitSpinner, submitText, true, 'جارٍ إرسال الطلب...');
 
             try {

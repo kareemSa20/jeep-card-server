@@ -32,7 +32,21 @@ class Database {
         try {
             if (fs.existsSync(DB_FILE)) {
                 const content = fs.readFileSync(DB_FILE, 'utf8');
-                return Object.assign({}, DEFAULT_DB, JSON.parse(content));
+                const loaded = Object.assign({}, DEFAULT_DB, JSON.parse(content));
+                // Clean up any historical duplicate requests:
+                if (Array.isArray(loaded.subscription_requests)) {
+                    const seen = new Set();
+                    const cleanReqs = [];
+                    for (const req of loaded.subscription_requests) {
+                        const norm = (req.pairingCode || '').replace(/[^A-Z0-9]/g, '').toUpperCase() || req.deviceId;
+                        if (!seen.has(norm)) {
+                            seen.add(norm);
+                            cleanReqs.push(req);
+                        }
+                    }
+                    loaded.subscription_requests = cleanReqs;
+                }
+                return loaded;
             }
         } catch (e) {
             console.error('Error loading database, resetting to default:', e);
@@ -101,10 +115,18 @@ class Database {
     }
 
     getAllDevices() {
+        const now = Date.now();
         return Object.values(this.data.devices).map(dev => {
             const license = this.getActiveLicenseForDevice(dev.deviceId);
+            // Find latest pairing code for this device
+            const pairings = Object.values(this.data.pairing_codes || {})
+                .filter(p => p.deviceId === dev.deviceId)
+                .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            const latestPairing = pairings.length > 0 ? pairings[0].code : (license ? (license.pairingCode || '-') : '-');
+
             return {
                 ...dev,
+                pairingCode: latestPairing,
                 freeOpsRemaining: Math.max(0, dev.totalFreeOpsLimit - dev.usedFreeOps),
                 license: license || null
             };
@@ -250,9 +272,26 @@ class Database {
 
         const { device } = verify;
         const now = Date.now();
+        const cleanCode = (pairingCode || '').trim().toUpperCase();
+        const normIncoming = cleanCode.replace(/[^A-Z0-9]/g, '');
 
-        this.data.request_seq = (this.data.request_seq || 1840) + 1;
-        const requestId = `#${this.data.request_seq}`;
+        // 1. If device already has an active approved license, reject new request immediately
+        const actualDev = this.getDevice(device.deviceId);
+        const activeLic = this.getActiveLicenseForDevice(device.deviceId) ||
+            Object.values(this.data.licenses || {}).find(l => 
+                (l.deviceId === device.deviceId || (l.pairingCode && l.pairingCode.replace(/[^A-Z0-9]/g, '') === normIncoming)) &&
+                l.status === 'ACTIVE' &&
+                (l.expiresAt === 0 || l.expiresAt > now)
+            );
+
+        if (activeLic && activeLic.status === 'ACTIVE') {
+            const isLifetime = activeLic.expiresAt === 0;
+            const remainingMs = isLifetime ? Infinity : (activeLic.expiresAt - now);
+            const remainingDays = isLifetime ? 9999 : Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+            if (isLifetime || remainingDays > 7) {
+                throw new Error(`طلبك السابق تم قبوله بالفعل وترخيصك نشط (${activeLic.planName || activeLic.plan})، متبقي ${remainingDays} يوم. أنت مشترك بالفعل!`);
+            }
+        }
 
         // Map plans to prices and default days
         const PLAN_MAP = {
@@ -264,12 +303,65 @@ class Database {
 
         const planConfig = PLAN_MAP[requestedPlan] || { name: requestedPlan, price: 'حسب الاتفاق', days: 30 };
 
+        // 2. Check if a request already exists for this device or pairing code (PREVENT DUPLICATES)
+        const existingReq = this.data.subscription_requests.find(r => {
+            const normReq = (r.pairingCode || '').replace(/[^A-Z0-9]/g, '');
+            return (r.deviceId === device.deviceId || (normIncoming && normReq === normIncoming));
+        });
+
+        if (existingReq) {
+            // If already approved with an active license, reject
+            if (existingReq.status === 'APPROVED' && existingReq.issuedLicenseId) {
+                const lic = this.data.licenses[existingReq.issuedLicenseId];
+                if (lic && lic.status === 'ACTIVE' && (lic.expiresAt === 0 || lic.expiresAt > now)) {
+                    const isLifetime = lic.expiresAt === 0;
+                    const remainingMs = isLifetime ? Infinity : (lic.expiresAt - now);
+                    const remainingDays = isLifetime ? 9999 : Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+                    if (isLifetime || remainingDays > 7) {
+                        throw new Error(`طلبك السابق تم قبوله بالفعل وترخيصك نشط (${lic.planName || lic.plan})، متبقي ${remainingDays} يوم. أنت مشترك بالفعل!`);
+                    }
+                }
+            }
+
+            // Update existing request in-place with latest data (DO NOT CREATE DUPLICATE)
+            existingReq.pairingCode = cleanCode;
+            existingReq.customerName = customerName || existingReq.customerName;
+            existingReq.customerPhone = customerPhone || existingReq.customerPhone;
+            existingReq.requestedPlan = requestedPlan;
+            existingReq.requestedPlanName = planConfig.name;
+            existingReq.requestedPrice = planConfig.price;
+            existingReq.requestedDays = planConfig.days;
+            existingReq.notes = notes || existingReq.notes;
+            existingReq.status = 'PENDING'; // Re-open as pending with updated data
+            existingReq.rejectionReason = '';
+            existingReq.updatedAt = now;
+
+            // Move to top so admin sees recent activity
+            const index = this.data.subscription_requests.indexOf(existingReq);
+            if (index > 0) {
+                this.data.subscription_requests.splice(index, 1);
+                this.data.subscription_requests.unshift(existingReq);
+            }
+
+            if (this.data.pairing_codes[cleanCode]) {
+                this.data.pairing_codes[cleanCode].status = 'PAIRED';
+            }
+
+            this.logAudit('REQUEST_UPDATED', `Request ${existingReq.id} updated with latest details for device ${device.deviceId}`, device.deviceId);
+            this.save();
+            return existingReq;
+        }
+
+        // 3. If no existing request, create new request
+        this.data.request_seq = (this.data.request_seq || 1840) + 1;
+        const requestId = `#${this.data.request_seq}`;
+
         const request = {
             id: requestId,
             deviceId: device.deviceId,
             appId: device.appId,
             hardwareModel: device.hardwareModel,
-            pairingCode: pairingCode.trim().toUpperCase(),
+            pairingCode: cleanCode,
             customerName: customerName || 'مشترك',
             customerPhone: customerPhone || '',
             requestedPlan: requestedPlan,
@@ -328,6 +420,7 @@ class Database {
         const rawLicense = {
             id: licenseId,
             deviceId: req.deviceId,
+            pairingCode: req.pairingCode || '',
             appId: req.appId,
             plan: plan,
             planName: req.requestedPlanName,
@@ -387,14 +480,27 @@ class Database {
     // ──────────────── Licenses Management ────────────────
 
     getActiveLicenseForDevice(deviceId) {
+        if (!deviceId) return null;
+        const now = Date.now();
         const device = this.data.devices[deviceId];
-        if (!device || !device.activeLicenseId) return null;
+        let license = (device && device.activeLicenseId) ? this.data.licenses[device.activeLicenseId] : null;
 
-        const license = this.data.licenses[device.activeLicenseId];
+        // If not found by activeLicenseId, search across all licenses by deviceId
+        if (!license) {
+            license = Object.values(this.data.licenses || {}).find(l => 
+                l.deviceId === deviceId && l.status === 'ACTIVE' && (l.expiresAt === 0 || l.expiresAt > now)
+            );
+            if (license && device) {
+                device.activeLicenseId = license.id;
+                device.status = 'ACTIVE';
+            }
+        }
+
         if (!license) return null;
 
-        if (license.status === 'ACTIVE' && license.expiresAt > 0 && Date.now() > license.expiresAt) {
+        if (license.status === 'ACTIVE' && license.expiresAt > 0 && now > license.expiresAt) {
             license.status = 'EXPIRED';
+            if (device) device.status = 'EXPIRED';
             this.save();
         }
 
@@ -456,6 +562,79 @@ class Database {
 
         this.save();
         return license;
+    }
+
+    issueLicenseByPairingCode({ pairingCode, plan, days, adminNotes }) {
+        if (!pairingCode) {
+            throw new Error('يرجى إدخال رمز الاقتران');
+        }
+        const verify = this.getDeviceByPairingCode(pairingCode);
+        if (!verify || verify.error) {
+            throw new Error(verify ? verify.message : 'كود الربط غير موجود أو منتهي الصلاحية');
+        }
+
+        const { device } = verify;
+        const now = Date.now();
+        const durationDays = Number(days) || 30;
+        const licensePlan = plan || 'month';
+
+        const PLAN_MAP = {
+            'month': { name: 'اشتراك شهر' },
+            '6months': { name: 'اشتراك 6 أشهر' },
+            'year': { name: 'اشتراك سنة' },
+            'lifetime': { name: 'اشتراك دائم' }
+        };
+        const planName = PLAN_MAP[licensePlan] ? PLAN_MAP[licensePlan].name : licensePlan;
+
+        const licenseId = `LIC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        const isLifetime = licensePlan === 'lifetime' || durationDays >= 36500;
+        const expiresAt = isLifetime ? 0 : now + (durationDays * 24 * 60 * 60 * 1000);
+
+        const rawLicense = {
+            id: licenseId,
+            deviceId: device.deviceId,
+            pairingCode: pairingCode.trim().toUpperCase(),
+            appId: device.appId,
+            plan: licensePlan,
+            planName: planName,
+            startAt: now,
+            expiresAt: expiresAt,
+            status: 'ACTIVE',
+            issuedAt: now,
+            requestId: null,
+            adminNotes: adminNotes || 'إصدار مباشر عبر رمز الاقتران'
+        };
+
+        rawLicense.signature = signLicense(rawLicense);
+
+        this.data.licenses[licenseId] = rawLicense;
+        const actualDev = this.getDevice(device.deviceId);
+        if (actualDev) {
+            actualDev.activeLicenseId = licenseId;
+            actualDev.status = 'ACTIVE';
+            actualDev.lastSeenAt = now;
+        }
+
+        // If there was any pending request for this device, mark it approved as well
+        const pending = this.data.subscription_requests.find(
+            r => (r.deviceId === device.deviceId || r.pairingCode === pairingCode.trim().toUpperCase()) && r.status === 'PENDING'
+        );
+        if (pending) {
+            pending.status = 'APPROVED';
+            pending.grantedPlan = licensePlan;
+            pending.grantedDays = durationDays;
+            pending.issuedLicenseId = licenseId;
+            pending.reviewedAt = now;
+            pending.adminNotes = adminNotes || 'تم التفعيل عبر رمز الاقتران المباشر';
+        }
+
+        this.logAudit('LICENSE_ISSUED_DIRECT', `License ${licenseId} issued directly via pairing code ${pairingCode} for ${durationDays} days`, device.deviceId);
+        this.save();
+
+        return {
+            license: rawLicense,
+            device: actualDev || device
+        };
     }
 
     // ──────────────── Dashboard Stats ────────────────
